@@ -4,7 +4,11 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 
-from models.database import SessionLocal, Price
+from models.database import SessionLocal, Price, Signal
+
+from algorithms.ma_crossover import calculate_ma_signal
+from algorithms.rsi import calculate_rsi_signal
+from algorithms.bollinger_band import calculate_bb_signal
 
 load_dotenv()
 
@@ -19,7 +23,7 @@ WATCHLIST = [
     "JPM", "BAC", "GS", "MS", "WFC", "BLK", "AXP", "V", "MA", "PYPL",
     "JNJ", "UNH", "PFE", "ABBV", "MRK", "CVS", "MDT", "ABT", "BMY", "AMGN",
     "XOM", "CVX", "COP", "SLB", "EOG", "PXD", "MPC", "VLO", "HAL", "OXY",
-    "WMT", "AMZN", "HD", "NKE", "SBUX", "MCD", "TGT", "COST", "LOW", "DG"
+    "WMT", "ETSY", "HD", "NKE", "SBUX", "MCD", "TGT", "COST", "LOW", "DG"
 ]
 
 def fetch_and_store_prices():
@@ -36,7 +40,6 @@ def fetch_and_store_prices():
                 volume=bars.v,
                 timestamp=datetime.now(),
                 timeframe="5Min"
-
             )
             session.add(price)
         session.commit()
@@ -47,8 +50,56 @@ def fetch_and_store_prices():
     finally:
         session.close()
 
+def calculate_confidence(ma_signal, rsi_signal, bb_signal):
+    signals = [ma_signal, rsi_signal, bb_signal]
+    
+    buy_count = signals.count("BUY")
+    sell_count = signals.count("SELL")
+    
+    if buy_count == 3:
+        return "BUY", 3
+    elif sell_count == 3:
+        return "SELL", 3
+    elif buy_count == 2:
+        return "BUY", 2
+    elif sell_count == 2:
+        return "SELL", 2
+    else:
+        return "NEUTRAL", 1
+
+def generate_signals():
+    session = SessionLocal()
+    try:
+        for ticker in WATCHLIST:
+            ma_signal = calculate_ma_signal(ticker)
+            rsi_signal = calculate_rsi_signal(ticker)
+            bb_signal = calculate_bb_signal(ticker)
+
+            overall_signal, confidence = calculate_confidence(ma_signal, rsi_signal, bb_signal)
+
+            if confidence >= 2:
+                signal = Signal(
+                    ticker=ticker,
+                    signal=overall_signal,
+                    ma_signal=ma_signal,
+                    rsi_signal=rsi_signal,
+                    bb_signal=bb_signal,
+                    confidence=confidence,
+                    price=0.0,
+                    created_at=datetime.now()
+                )
+                session.add(signal)
+                session.commit()
+                print(f"Signal saved: {ticker} {overall_signal} confidence {confidence}")
+    except Exception as e:
+        print(f"Error generating signals: {e}")
+        session.rollback()
+    finally:
+        session.close()
+
 if __name__ == "__main__":
     print("Trading engine started...")
     while True:
         fetch_and_store_prices()
+        generate_signals()
         time.sleep(300)
