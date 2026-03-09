@@ -34,7 +34,9 @@ def fetch_and_store_prices():
                 low=bars.l,
                 close=bars.c,
                 volume=bars.v,
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
+                timeframe="5Min"
+
             )
             session.add(price)
         session.commit()

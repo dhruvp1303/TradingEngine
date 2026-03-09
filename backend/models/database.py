@@ -23,6 +23,7 @@ class Price(Base):
     close = Column(Float)
     volume = Column(Float)
     timestamp = Column(DateTime)
+    timeframe = Column(String, default="1Day")
 
 class Signal(Base):
     __tablename__ = "signals"
