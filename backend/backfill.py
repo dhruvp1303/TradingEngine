@@ -29,29 +29,31 @@ def backfill_historical_data():
 
         for ticker in WATCHLIST:
             print(f"Getting historical data for {ticker} from {start_date} to {end_date}")
+            try:
+                bars = api.get_bars(ticker, "1Day", start=start_date, end=end_date, feed="iex").df
+                for timestamp, row in bars.iterrows():
+                    price = Price(
+                        ticker=ticker,
+                        open=float(row["open"]),
+                        high=float(row["high"]),
+                        low=float(row["low"]),
+                        close=float(row["close"]),
+                        volume=float(row["volume"]),
+                        timestamp=timestamp,
+                        timeframe="1Day"  # Fix: was missing, algorithms filter on this
+                    )
+                    session.add(price)
 
-            bars = api.get_bars(ticker, "1Day", start=start_date, end=end_date, feed="iex").df
-            for timestamp, row in bars.iterrows():
-        
-            
-                price = Price(
-                    ticker=ticker,
-                    open=float(row["open"]),
-                    high=float(row["high"]),
-                    low=float(row["low"]),
-                    close=float(row["close"]),
-                    volume=float(row["volume"]),
-                    timestamp=timestamp
-            )
-                session.add(price)
+                session.commit()
+                print(f"Historical data for {ticker} saved")
 
-    except Exception as e:
-            print(f"Error occurred while fetching data for {ticker}: {e}")  
-        
+            except Exception as e:
+                print(f"Error occurred while fetching data for {ticker}: {e}")
+                session.rollback()
+
     finally:
-            session.commit()
-            print(f"Historical data for {ticker} saved")
-        
+        session.close()
+
 if __name__ == "__main__":
     backfill_historical_data()
-    print("Backfill done")  
+    print("Backfill done")

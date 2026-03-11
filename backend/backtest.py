@@ -130,7 +130,10 @@ def backtest(start_date, end_date, strategy="combined"):
         total_trades = len(trades)
         final_value = portfolio_values[-1]
         total_return = (final_value - STARTING_CAPITAL) / STARTING_CAPITAL
-        annual_return = total_return / 2  # 2 year backtest
+
+        # Fix: compute annualized return from actual date range instead of hardcoding /2
+        num_years = (end_date - start_date).days / 365.25
+        annual_return = (1 + total_return) ** (1 / num_years) - 1 if num_years > 0 else 0
 
         # Sharpe ratio using daily portfolio returns
         portfolio_series = pd.Series(portfolio_values)
@@ -147,7 +150,7 @@ def backtest(start_date, end_date, strategy="combined"):
         print(f"Total profit: ${final_value - STARTING_CAPITAL:,.2f}")
         print(f"Total trades: {total_trades}")
         print(f"Win rate: {win_rate:.2%}")
-        print(f"Annual return: {annual_return:.2%}")
+        print(f"Annualized return: {annual_return:.2%}")
         print(f"Sharpe ratio: {sharpe_ratio:.2f}")
         print(f"Max drawdown: {max_drawdown:.2%}")
 

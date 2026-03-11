@@ -1,8 +1,8 @@
-import time
 import alpaca_trade_api as tradeapi
 from datetime import datetime
 from dotenv import load_dotenv
 import os
+import time
 
 from models.database import SessionLocal, Price, Signal
 
@@ -26,20 +26,37 @@ WATCHLIST = [
     "WMT", "ETSY", "HD", "NKE", "SBUX", "MCD", "TGT", "COST", "LOW", "DG"
 ]
 
+ran_today = None  # tracks the last date we pulled data
+
+def is_market_closing():
+    """Returns True only in the 1-minute window when market just closed."""
+    try:
+        clock = api.get_clock()
+        # next_close is a datetime — if we're within 1 min after close, fire
+        seconds_since_close = (datetime.now(clock.next_close.tzinfo) - clock.next_close).total_seconds()
+        return 0 <= seconds_since_close <= 60
+    except Exception as e:
+        print(f"Clock error: {e}")
+        return False
+
 def fetch_and_store_prices():
     session = SessionLocal()
     try:
         for ticker in WATCHLIST:
-            bars = api.get_latest_bar(ticker)
+            bars = api.get_bars(ticker, "1Day", limit=1, feed="iex").df
+            if bars.empty:
+                print(f"No bar data for {ticker}, skipping.")
+                continue
+            row = bars.iloc[-1]
             price = Price(
                 ticker=ticker,
-                open=bars.o,
-                high=bars.h,
-                low=bars.l,
-                close=bars.c,
-                volume=bars.v,
+                open=float(row["open"]),
+                high=float(row["high"]),
+                low=float(row["low"]),
+                close=float(row["close"]),
+                volume=float(row["volume"]),
                 timestamp=datetime.now(),
-                timeframe="5Min"
+                timeframe="1Day"
             )
             session.add(price)
         session.commit()
@@ -52,10 +69,8 @@ def fetch_and_store_prices():
 
 def calculate_confidence(ma_signal, rsi_signal, bb_signal):
     signals = [ma_signal, rsi_signal, bb_signal]
-    
     buy_count = signals.count("BUY")
     sell_count = signals.count("SELL")
-    
     if buy_count == 3:
         return "BUY", 3
     elif sell_count == 3:
@@ -74,9 +89,7 @@ def generate_signals():
             ma_signal = calculate_ma_signal(ticker)
             rsi_signal = calculate_rsi_signal(ticker)
             bb_signal = calculate_bb_signal(ticker)
-
             overall_signal, confidence = calculate_confidence(ma_signal, rsi_signal, bb_signal)
-
             if confidence >= 2:
                 signal = Signal(
                     ticker=ticker,
@@ -100,6 +113,11 @@ def generate_signals():
 if __name__ == "__main__":
     print("Trading engine started...")
     while True:
-        fetch_and_store_prices()
-        generate_signals()
-        time.sleep(300)
+        today = datetime.now().date()
+        if is_market_closing() and ran_today != today:
+            print(f"Market just closed — fetching data for {today}...")
+            fetch_and_store_prices()
+            generate_signals()
+            ran_today = today
+            print("Done for today.")
+        time.sleep(60)  # check once per minute
