@@ -9,6 +9,7 @@ from models.database import SessionLocal, Price, Signal
 from algorithms.ma_crossover import calculate_ma_signal
 from algorithms.rsi import calculate_rsi_signal
 from algorithms.bollinger_band import calculate_bb_signal
+from ai.sentiment import calculate_sentiment_signal
 
 load_dotenv()
 
@@ -18,21 +19,27 @@ BASE_URL = os.getenv("ALPACA_BASE_URL")
 
 api = tradeapi.REST(API_KEY, SECRET_KEY, BASE_URL)
 
-WATCHLIST = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AMD", "INTC", "CRM",
-    "JPM", "BAC", "GS", "MS", "WFC", "BLK", "AXP", "V", "MA", "PYPL",
-    "JNJ", "UNH", "PFE", "ABBV", "MRK", "CVS", "MDT", "ABT", "BMY", "AMGN",
-    "XOM", "CVX", "COP", "SLB", "EOG", "PXD", "MPC", "VLO", "HAL", "OXY",
-    "WMT", "ETSY", "HD", "NKE", "SBUX", "MCD", "TGT", "COST", "LOW", "DG"
-]
+WATCHLIST = {
+    "AAPL": "Apple", "MSFT": "Microsoft", "GOOGL": "Google", "AMZN": "Amazon",
+    "NVDA": "Nvidia", "META": "Meta", "TSLA": "Tesla", "AMD": "AMD",
+    "INTC": "Intel", "CRM": "Salesforce", "JPM": "JPMorgan", "BAC": "Bank of America",
+    "GS": "Goldman Sachs", "MS": "Morgan Stanley", "WFC": "Wells Fargo",
+    "BLK": "BlackRock", "AXP": "American Express", "V": "Visa", "MA": "Mastercard",
+    "PYPL": "PayPal", "JNJ": "Johnson & Johnson", "UNH": "UnitedHealth",
+    "PFE": "Pfizer", "ABBV": "AbbVie", "MRK": "Merck", "CVS": "CVS Health",
+    "MDT": "Medtronic", "ABT": "Abbott", "BMY": "Bristol Myers", "AMGN": "Amgen",
+    "XOM": "ExxonMobil", "CVX": "Chevron", "COP": "ConocoPhillips", "SLB": "SLB",
+    "EOG": "EOG Resources", "PXD": "Pioneer Natural", "MPC": "Marathon Petroleum",
+    "VLO": "Valero", "HAL": "Halliburton", "OXY": "Occidental", "WMT": "Walmart",
+    "ETSY": "Etsy", "HD": "Home Depot", "NKE": "Nike", "SBUX": "Starbucks",
+    "MCD": "McDonald's", "TGT": "Target", "COST": "Costco", "LOW": "Lowe's", "DG": "Dollar General"
+}
 
-ran_today = None  # tracks the last date we pulled data
+ran_today = None
 
 def is_market_closing():
-    """Returns True only in the 1-minute window when market just closed."""
     try:
         clock = api.get_clock()
-        # next_close is a datetime — if we're within 1 min after close, fire
         seconds_since_close = (datetime.now(clock.next_close.tzinfo) - clock.next_close).total_seconds()
         return 0 <= seconds_since_close <= 60
     except Exception as e:
@@ -67,14 +74,15 @@ def fetch_and_store_prices():
     finally:
         session.close()
 
-def calculate_confidence(ma_signal, rsi_signal, bb_signal):
-    signals = [ma_signal, rsi_signal, bb_signal]
+def calculate_confidence(ma_signal, rsi_signal, bb_signal, sentiment_signal):
+    signals = [ma_signal, rsi_signal, bb_signal, sentiment_signal]
     buy_count = signals.count("BUY")
     sell_count = signals.count("SELL")
-    if buy_count == 3:
-        return "BUY", 3
-    elif sell_count == 3:
-        return "SELL", 3
+
+    if buy_count >= 3:
+        return "BUY", buy_count
+    elif sell_count >= 3:
+        return "SELL", sell_count
     elif buy_count == 2:
         return "BUY", 2
     elif sell_count == 2:
@@ -85,11 +93,14 @@ def calculate_confidence(ma_signal, rsi_signal, bb_signal):
 def generate_signals():
     session = SessionLocal()
     try:
-        for ticker in WATCHLIST:
+        for ticker, company_name in WATCHLIST.items():
             ma_signal = calculate_ma_signal(ticker)
             rsi_signal = calculate_rsi_signal(ticker)
             bb_signal = calculate_bb_signal(ticker)
-            overall_signal, confidence = calculate_confidence(ma_signal, rsi_signal, bb_signal)
+            sentiment_signal, sentiment_score = calculate_sentiment_signal(ticker, company_name)
+
+            overall_signal, confidence = calculate_confidence(ma_signal, rsi_signal, bb_signal, sentiment_signal)
+
             if confidence >= 2:
                 signal = Signal(
                     ticker=ticker,
@@ -98,12 +109,14 @@ def generate_signals():
                     rsi_signal=rsi_signal,
                     bb_signal=bb_signal,
                     confidence=confidence,
+                    sentiment_score=float(sentiment_score),
+                    sentiment_source=sentiment_signal,
                     price=0.0,
                     created_at=datetime.now()
                 )
                 session.add(signal)
                 session.commit()
-                print(f"Signal saved: {ticker} {overall_signal} confidence {confidence}")
+                print(f"Signal saved: {ticker} {overall_signal} confidence {confidence} sentiment {sentiment_signal}")
     except Exception as e:
         print(f"Error generating signals: {e}")
         session.rollback()
@@ -120,4 +133,4 @@ if __name__ == "__main__":
             generate_signals()
             ran_today = today
             print("Done for today.")
-        time.sleep(60)  # check once per minute
+        time.sleep(60)
