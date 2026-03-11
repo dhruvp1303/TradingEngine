@@ -1,12 +1,13 @@
 from models.database import SessionLocal, Price
 import pandas as pd
 
-def calculate_rsi_signal(ticker, period=14):
+def calculate_rsi_signal(ticker, period=14, as_of_date=None):
     session = SessionLocal()
     try:
         rows = session.query(Price).filter(
             Price.ticker == ticker,
-            Price.timeframe == "1Day"
+            Price.timeframe == "1Day",
+            Price.timestamp <= as_of_date if as_of_date else True
         ).order_by(Price.timestamp.desc()).limit(period + 1).all()
 
         if len(rows) < period + 1:

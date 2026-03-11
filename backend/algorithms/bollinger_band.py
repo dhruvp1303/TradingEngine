@@ -1,12 +1,13 @@
 from models.database import SessionLocal, Price
 import pandas as pd
 
-def calculate_bb_signal(ticker, period=20, std_dev=2):
+def calculate_bb_signal(ticker, period=20, std_dev=2, as_of_date=None):
     session = SessionLocal()
     try:
         rows = session.query(Price).filter(
             Price.ticker == ticker,
-            Price.timeframe == "1Day"
+            Price.timeframe == "1Day",
+            Price.timestamp <= as_of_date if as_of_date else True
         ).order_by(Price.timestamp.desc()).limit(period).all()
 
         if len(rows) < period:
