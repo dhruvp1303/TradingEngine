@@ -34,6 +34,7 @@ class Signal(Base):
     ma_signal = Column(String)
     rsi_signal = Column(String)
     bb_signal = Column(String)
+    sentiment_signal = Column(String, nullable=True)
     confidence = Column(Integer)
     sentiment_score = Column(Float, nullable=True)
     sentiment_source = Column(String, nullable=True)

@@ -85,7 +85,7 @@ def calculate_confidence(ma_signal, rsi_signal, bb_signal, sentiment_signal):
         return "SELL", sell_count
     elif buy_count == 2:
         return "BUY", 2
-    elif sell_count == 2:
+    elif sell_count >= 2:
         return "SELL", 2
     else:
         return "NEUTRAL", 1
@@ -97,7 +97,7 @@ def generate_signals():
             ma_signal = calculate_ma_signal(ticker)
             rsi_signal = calculate_rsi_signal(ticker)
             bb_signal = calculate_bb_signal(ticker)
-            sentiment_signal, sentiment_score = calculate_sentiment_signal(ticker, company_name)
+            sentiment_signal = calculate_sentiment_signal(ticker, company_name)
 
             overall_signal, confidence = calculate_confidence(ma_signal, rsi_signal, bb_signal, sentiment_signal)
 
@@ -108,8 +108,8 @@ def generate_signals():
                     ma_signal=ma_signal,
                     rsi_signal=rsi_signal,
                     bb_signal=bb_signal,
+                    sentiment_signal=sentiment_signal,
                     confidence=confidence,
-                    sentiment_score=float(sentiment_score),
                     sentiment_source=sentiment_signal,
                     price=0.0,
                     created_at=datetime.now()
@@ -127,7 +127,8 @@ if __name__ == "__main__":
     print("Trading engine started...")
     while True:
         today = datetime.now().date()
-        if is_market_closing() and ran_today != today:
+        ##if is_market_closing() and ran_today != today:
+        if ran_today != today:
             print(f"Market just closed — fetching data for {today}...")
             fetch_and_store_prices()
             generate_signals()
