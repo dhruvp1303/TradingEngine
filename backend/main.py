@@ -37,11 +37,10 @@ WATCHLIST = {
 
 ran_today = None
 
-def is_market_closing():
+def is_after_market_close():
     try:
         clock = api.get_clock()
-        seconds_since_close = (datetime.now(clock.next_close.tzinfo) - clock.next_close).total_seconds()
-        return 0 <= seconds_since_close <= 60
+        return not clock.is_open
     except Exception as e:
         print(f"Clock error: {e}")
         return False
@@ -127,8 +126,7 @@ if __name__ == "__main__":
     print("Trading engine started...")
     while True:
         today = datetime.now().date()
-        ##if is_market_closing() and ran_today != today:
-        if ran_today != today:
+        if is_after_market_close() and ran_today != today:
             print(f"Market just closed — fetching data for {today}...")
             fetch_and_store_prices()
             generate_signals()
