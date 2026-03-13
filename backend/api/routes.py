@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from models.database import SessionLocal, Signal, Price
 from ai.explanations import generate_explanation
+from main import WATCHLIST
 
 router = APIRouter()
 
@@ -78,6 +79,13 @@ def get_all_signals():
         return results
     finally:
         session.close()
+
+
+@router.get("/tickers")
+def get_tickers():
+    return list(WATCHLIST.keys())
+
+
 
 @router.get("/prices/{ticker}")
 def get_prices(ticker: str):
