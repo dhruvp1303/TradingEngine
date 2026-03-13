@@ -21,7 +21,7 @@ def get_signal(ticker: str):
             "ma_signal": signal.ma_signal,
             "rsi_signal": signal.rsi_signal,
             "bb_signal": signal.bb_signal,
-            "sentiment_signal": signal.sentiment_source,
+            "sentiment_signal": signal.sentiment_signal,
             "confidence": signal.confidence,
             "created_at": signal.created_at
         }
@@ -44,7 +44,7 @@ def get_explanation(ticker: str):
             ma_signal=signal.ma_signal,
             rsi_signal=signal.rsi_signal,
             bb_signal=signal.bb_signal,
-            sentiment_signal=signal.sentiment_source
+            sentiment_signal=signal.sentiment_signal
         )
 
         return {

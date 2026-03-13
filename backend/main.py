@@ -109,7 +109,6 @@ def generate_signals():
                     bb_signal=bb_signal,
                     sentiment_signal=sentiment_signal,
                     confidence=confidence,
-                    sentiment_source=sentiment_signal,
                     price=0.0,
                     created_at=datetime.now()
                 )
