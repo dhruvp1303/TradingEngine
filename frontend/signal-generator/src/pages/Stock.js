@@ -1,9 +1,10 @@
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 function Stock() {
   const { ticker } = useParams();
+  const navigate = useNavigate();
   const [signals, setSignals] = useState(null);
   const [explanation, setExplanation] = useState(null);
 
@@ -56,32 +57,41 @@ function Stock() {
             </div>
           </div>
 
-          {/* 4 Signal Cards */}
+          {/* 4 Signal Cards - clickable */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {[
-              { label: 'MA Crossover', value: signals.ma_signal },
-              { label: 'RSI', value: signals.rsi_signal },
-              { label: 'Bollinger Bands', value: signals.bb_signal },
-              { label: 'News Sentiment', value: signals.sentiment_signal },
-            ].map(({ label, value }) => (
-              <div key={label} style={{
-                flex: '1',
-                minWidth: '150px',
-                padding: '16px',
-                borderRadius: '8px',
-                border: '1px solid #333',
-                backgroundColor: '#111',
-                textAlign: 'center'
-              }}>
+              { label: 'MA Crossover', value: signals.ma_signal, type: 'ma' },
+              { label: 'RSI', value: signals.rsi_signal, type: 'rsi' },
+              { label: 'Bollinger Bands', value: signals.bb_signal, type: 'bb' },
+              { label: 'News Sentiment', value: signals.sentiment_signal, type: 'sentiment' },
+            ].map(({ label, value, type }) => (
+              <div
+                key={label}
+                onClick={() => navigate(`/signal-info/${type}`)}
+                style={{
+                  flex: '1',
+                  minWidth: '150px',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  border: '1px solid #333',
+                  backgroundColor: '#111',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#555'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#333'}
+              >
                 <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '8px' }}>{label}</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: getSignalColor(value) }}>{value}</div>
+                <div style={{ fontSize: '11px', color: '#555', marginTop: '8px' }}>Click to learn more</div>
               </div>
             ))}
           </div>
 
         </div>
       ) : (
-        <p style={{ color: '#aaa', marginTop: '20px' }}>No clear signal available for {ticker} yet. Conflicting signals detected. When clear signals appear, they will be displayed here!</p>
+        <p style={{ color: '#aaa', marginTop: '20px' }}>No signal available for {ticker} yet. Check back after market close.</p>
       )}
 
       {/* AI Explanation */}

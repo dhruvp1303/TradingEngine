@@ -112,3 +112,5 @@ def get_prices(ticker: str):
         ]
     finally:
         session.close()
+
+        # uvicorn app:app --reload
