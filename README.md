@@ -1,16 +1,6 @@
-TradingEngine
-A real-time algorithmic trading signal engine that ingests live market data for 50 stocks, runs 3 trading strategies simultaneously, and stores buy/sell signals with confidence scores.
-What It Does
-
-Fetches live stock prices from Alpaca Markets API every 5 minutes
-Runs 3 algorithms: Moving Average Crossover, RSI, and Bollinger Bands
-Scores signal confidence 1-3 based on strategy agreement
-Stores all prices, signals, and backtest results in PostgreSQL
-FastAPI backend serving live signals to a React dashboard
-
-Tech Stack
-Python · FastAPI · PostgreSQL · SQLAlchemy · Alpaca Markets API · React · AWS EC2 · Vercel
-Status
-🚧 In active development — backend data pipeline complete, algorithms in progress
-Live Demo
-Coming soon
+Trading Signal Engine
+Live: trading-engine-pi.vercel.app
+A full-stack algorithmic trading platform I built and deployed end to end. It tracks 50 equities and generates daily trading signals using four strategies — MA Crossover, RSI, Bollinger Bands, and an AI news sentiment layer powered by Groq's LLaMA 3.3 model reading live headlines from NewsAPI. All signals are stored in PostgreSQL and served via a FastAPI backend. The React frontend shows each stock's signals, a TradingView chart, and a plain English AI explanation of what the signals mean that day.
+The engine runs automatically every weekday. At market close it pulls fresh price data from Alpaca, runs all four algorithms, scores each ticker by how many signals agree (confidence 1–4), and saves anything with a score of 2 or higher. I backtested it over two years of historical data and got a 69% win rate, 1.20 Sharpe ratio, and 17.7% annualized return on a $100K simulated portfolio.
+The backend runs 24/7 on AWS EC2 with systemd managing both the API server and the trading engine. HTTPS is handled by Caddy. The frontend is deployed on Vercel.
+Stack: Python · FastAPI · PostgreSQL · React · AWS EC2 · Groq LLaMA 3.3 · NewsAPI · Alpaca Markets
